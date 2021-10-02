@@ -9,15 +9,16 @@ use defmt::*;
 use defmt_rtt as _;
 use embedded_hal::digital::v2::OutputPin;
 use embedded_time::fixed_point::FixedPoint;
-use panic_probe as _;
-use rp2040_hal as hal;
 
+use core::fmt::Write;
 use hal::{
     clocks::{init_clocks_and_plls, Clock},
     pac,
     sio::Sio,
     watchdog::Watchdog,
 };
+use panic_probe as _;
+use rp2040_hal as hal;
 
 #[link_section = ".boot2"]
 #[used]
@@ -56,11 +57,25 @@ fn main() -> ! {
 
     let mut led_pin = pins.gpio25.into_push_pull_output();
 
+    let mut uart = hal::uart::UartPeripheral::<_, _>::enable(
+        pac.UART0,
+        &mut pac.RESETS,
+        hal::uart::common_configs::_115200_8_N_1,
+        clocks.peripheral_clock.into(),
+    )
+    .unwrap();
+
+    let _tx_pin = pins.gpio0.into_mode::<hal::gpio::FunctionUart>();
+    let _rx_pin = pins.gpio1.into_mode::<hal::gpio::FunctionUart>();
+
     loop {
         info!("on!");
+        writeln!(uart, "on!").unwrap();
         led_pin.set_high().unwrap();
         delay.delay_ms(500);
+
         info!("off!");
+        writeln!(uart, "off!").unwrap();
         led_pin.set_low().unwrap();
         delay.delay_ms(500);
     }
